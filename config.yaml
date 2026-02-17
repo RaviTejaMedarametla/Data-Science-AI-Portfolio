@@ -1,0 +1,46 @@
+seed: 42
+data:
+  path: ml_datasource.csv
+  target: purchased
+  test_size: 0.2
+features:
+  epsilon: 1.0e-06
+  engagement:
+    minutes_watched_weight: 0.6
+    days_on_platform_weight: 0.3
+    courses_started_weight: 10.0
+preprocessing:
+  outlier_factor: 1.5
+  numeric_imputer: median
+  categorical_imputer: most_frequent
+models:
+  logistic_regression:
+    max_iter: 2000
+  knn:
+    n_neighbors: 7
+  svm:
+    C: 1.0
+    kernel: rbf
+    gamma: scale
+  decision_tree:
+    max_depth: 8
+    min_samples_leaf: 10
+  random_forest:
+    n_estimators: 400
+    min_samples_leaf: 2
+cv:
+  n_splits: 5
+business:
+  target_precision: 0.9
+artifacts:
+  model_dir: artifacts
+  model_file: best_model.joblib
+  threshold_file: threshold.txt
+  metrics_file: metrics.json
+  drift_baseline_file: drift_baseline.json
+monitoring:
+  prediction_log_file: artifacts/prediction_log.jsonl
+  drift_min_samples: 50
+  drift_zscore_threshold: 3.0
+  drift_min_features: 2
+  class_rate_shift_threshold: 0.1

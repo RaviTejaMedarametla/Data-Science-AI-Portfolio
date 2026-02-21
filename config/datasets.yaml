@@ -1,0 +1,15 @@
+datasets:
+  student_model:
+    path: ml_datasource.csv
+    version: v1.0.0
+    owner: local_repo
+  segmentation:
+    path: segmentation_data.csv
+    version: v1.0.0
+    owner: local_repo
+  analytics_sql:
+    paths:
+      - student_database_schema.sql
+      - warehouse_star_schema.sql
+      - student_kpi_queries.sql
+    version: v1.0.0

@@ -1,0 +1,20 @@
+integrations:
+  neural_network_repo:
+    expected_artifacts:
+      - checkpoints/
+      - training_metrics.json
+  digit_classifier_repo:
+    expected_artifacts:
+      - model.onnx
+      - quantization_report.json
+  nba_pipeline_repo:
+    expected_artifacts:
+      - stream_events.jsonl
+      - feature_store_snapshot.parquet
+  healthcare_ai_repo:
+    expected_artifacts:
+      - edge_eval.csv
+      - safety_thresholds.yaml
+  merge_policy:
+    destination_root: artifacts/external/
+    note: "Drop external artifacts here to include in benchmarking and deployment comparisons."

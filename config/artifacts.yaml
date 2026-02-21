@@ -1,0 +1,12 @@
+artifacts:
+  tracking_root: artifacts/
+  model_registry:
+    - artifacts/best_model.joblib
+    - artifacts/model.onnx
+  benchmark_outputs:
+    - artifacts/hardware_tradeoffs.csv
+    - artifacts/benchmark_dashboard.csv
+    - artifacts/benchmark_tradeoff.png
+  monitoring_logs:
+    - artifacts/prediction_log.jsonl
+    - artifacts/stream_inference.jsonl

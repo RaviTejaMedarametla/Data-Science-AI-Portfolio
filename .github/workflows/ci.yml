@@ -31,6 +31,13 @@ jobs:
       - name: Train pipeline smoke test
         run: python -m src.train
 
+
+      - name: Unified systems workflow smoke test
+        run: |
+          python real_time_pipelines/unified_pipeline.py --mode both
+          python hardware_aware_ml/tradeoff_experiments.py
+          python benchmarking/dashboard.py
+
       - name: API smoke tests (warnings as errors)
         run: |
           python -W error - <<'PY'

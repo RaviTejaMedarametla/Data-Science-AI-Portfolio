@@ -1,0 +1,11 @@
+experiments:
+  baseline_student_predictor:
+    entrypoint: python -m src.train
+    seed: 42
+    objective: maximize_roc_auc
+  hardware_tradeoffs:
+    entrypoint: python hardware_aware_ml/tradeoff_experiments.py
+    objective: optimize_accuracy_latency_energy
+  benchmark_dashboard:
+    entrypoint: python benchmarking/dashboard.py
+    objective: compare_system_tradeoffs

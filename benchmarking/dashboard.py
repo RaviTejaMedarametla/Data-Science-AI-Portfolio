@@ -35,7 +35,8 @@ def main() -> None:
     plt.figure(figsize=(7, 4))
     plt.scatter(df["latency_ms_per_sample"], df["accuracy"], s=120)
     for _, r in df.iterrows():
-        plt.annotate(f"{r['precision']}-b{int(r['batch_size'])}", (r["latency_ms_per_sample"], r["accuracy"]))
+        label = r.get('scenario', 'scenario')
+        plt.annotate(str(label), (r['latency_ms_per_sample'], r['accuracy']))
     plt.xlabel("Latency (ms/sample)")
     plt.ylabel("Accuracy")
     plt.title("System Trade-off: Latency vs Accuracy")

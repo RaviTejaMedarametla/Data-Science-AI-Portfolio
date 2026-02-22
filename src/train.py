@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import uuid
 from pathlib import Path
 
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.calibration import CalibratedClassifierCV
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, precision_recall_curve, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, cross_validate
@@ -20,7 +20,14 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 from src.data import load_config, load_dataset, set_global_seed, split_data
-from src.features import IQRClipper
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    return _sha256_bytes(path.read_bytes())
 
 
 def build_preprocessor(X_train: pd.DataFrame, config: dict) -> ColumnTransformer:
@@ -29,16 +36,13 @@ def build_preprocessor(X_train: pd.DataFrame, config: dict) -> ColumnTransformer
 
     numeric_transformer = Pipeline(
         steps=[
-            ("imputer", SimpleImputer(strategy=config["preprocessing"]["numeric_imputer"])),
-            ("outlier_clipper", IQRClipper(factor=float(config["preprocessing"]["outlier_factor"]))),
-            ("scaler", StandardScaler()),
+                        ("scaler", StandardScaler()),
         ]
     )
 
     categorical_transformer = Pipeline(
         steps=[
-            ("imputer", SimpleImputer(strategy=config["preprocessing"]["categorical_imputer"])),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
+                        ("onehot", OneHotEncoder(handle_unknown="ignore")),
         ]
     )
 
@@ -136,10 +140,7 @@ def main() -> None:
     best_model_name = cv_df.iloc[0]["model"]
     best_pipeline = trained[best_model_name]
 
-    calibrated = CalibratedClassifierCV(estimator=best_pipeline, method="sigmoid", cv=5)
-    calibrated.fit(X_train, y_train)
-
-    probs = calibrated.predict_proba(X_test)[:, 1]
+    probs = best_pipeline.predict_proba(X_test)[:, 1]
     precisions, recalls, thresholds = precision_recall_curve(y_test, probs)
     target_precision = float(config["business"]["target_precision"])
 
@@ -152,10 +153,26 @@ def main() -> None:
     threshold = float(thresholds[idx])
     preds = (probs >= threshold).astype(int)
 
+    out_dir = Path(config["artifacts"]["model_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    model_path = out_dir / config["artifacts"]["model_file"]
+    threshold_path = out_dir / config["artifacts"]["threshold_file"]
+    metrics_path = out_dir / config["artifacts"]["metrics_file"]
+    lineage_path = out_dir / config["artifacts"].get("lineage_file", "lineage.json")
+
+    joblib.dump(best_pipeline, model_path)
+    threshold_path.write_text(str(threshold), encoding="utf-8")
+
+    run_id = str(uuid.uuid4())
+    config_hash = _sha256_file(Path("config.yaml"))
+    dataset_hash = _sha256_file(Path(config["data"]["path"]))
+    model_hash = _sha256_file(model_path)
+
     metrics = {
+        "run_id": run_id,
         "best_model_name": best_model_name,
-        "threshold": threshold,
-        "target_precision": target_precision,
+        "calibration": {"type": "threshold", "target_precision": target_precision, "threshold": threshold},
         "accuracy": float(accuracy_score(y_test, preds)),
         "roc_auc": float(roc_auc_score(y_test, probs)),
         "precision": float(precision_score(y_test, preds, zero_division=0)),
@@ -163,13 +180,28 @@ def main() -> None:
         "f1": float(f1_score(y_test, preds, zero_division=0)),
         "cv_ranking": cv_df.to_dict(orient="records"),
     }
+    metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
-    out_dir = Path(config["artifacts"]["model_dir"])
-    out_dir.mkdir(parents=True, exist_ok=True)
-    joblib.dump(calibrated, out_dir / config["artifacts"]["model_file"])
-
-    (out_dir / config["artifacts"]["threshold_file"]).write_text(str(threshold), encoding="utf-8")
-    (out_dir / config["artifacts"]["metrics_file"]).write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    lineage = {
+        "run_id": run_id,
+        "dataset": {
+            "path": config["data"]["path"],
+            "sha256": dataset_hash,
+        },
+        "config": {
+            "path": "config.yaml",
+            "sha256": config_hash,
+        },
+        "model": {
+            "path": str(model_path),
+            "sha256": model_hash,
+        },
+        "threshold": {
+            "path": str(threshold_path),
+            "sha256": _sha256_file(threshold_path),
+        },
+    }
+    lineage_path.write_text(json.dumps(lineage, indent=2), encoding="utf-8")
 
     baseline = build_drift_baseline(X_train, y_train)
     baseline_path = out_dir / config["artifacts"].get("drift_baseline_file", "drift_baseline.json")

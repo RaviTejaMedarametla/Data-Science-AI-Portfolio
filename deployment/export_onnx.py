@@ -4,9 +4,10 @@ import json
 from pathlib import Path
 import sys
 
+import joblib
 import numpy as np
 from skl2onnx import to_onnx
-from sklearn.linear_model import LogisticRegression
+from skl2onnx.common.data_types import FloatTensorType, StringTensorType
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -15,25 +16,42 @@ if str(ROOT) not in sys.path:
 from src.data import load_config, load_dataset, split_data
 
 
+def _build_initial_types(df):
+    initial_types = []
+    for col in df.columns:
+        kind = df[col].dtype.kind
+        if kind in {"i", "u", "b", "f"}:
+            initial_types.append((col, FloatTensorType([None, 1])))
+        else:
+            initial_types.append((col, StringTensorType([None, 1])))
+    return initial_types
+
+
 def main() -> None:
     config = load_config("config.yaml")
+    model_path = Path(config["artifacts"]["model_dir"]) / config["artifacts"]["model_file"]
+    if not model_path.exists():
+        raise FileNotFoundError("Train first: python -m src.train")
+
+    model = joblib.load(model_path)
     df = load_dataset(config)
-    X_train, X_test, y_train, _ = split_data(df, config)
+    _, X_test, _, _ = split_data(df, config)
 
-    num_cols = X_train.select_dtypes(include=np.number).columns.tolist()
-    X_train_num = X_train[num_cols].fillna(X_train[num_cols].median())
-    X_test_num = X_test[num_cols].fillna(X_train[num_cols].median())
-
-    model = LogisticRegression(max_iter=500)
-    model.fit(X_train_num, y_train)
-
-    onx = to_onnx(model, X_test_num.head(1).to_numpy(dtype=np.float32), target_opset=15)
+    initial_types = _build_initial_types(X_test)
+    onx = to_onnx(model, initial_types=initial_types, target_opset=15)
 
     out_dir = Path("artifacts")
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "model.onnx").write_bytes(onx.SerializeToString())
-    (out_dir / "onnx_features.json").write_text(json.dumps(num_cols, indent=2), encoding="utf-8")
-    print("Wrote artifacts/model.onnx and artifacts/onnx_features.json")
+    (out_dir / "onnx_features.json").write_text(json.dumps(X_test.columns.tolist(), indent=2), encoding="utf-8")
+
+    threshold_path = Path(config["artifacts"]["model_dir"]) / config["artifacts"]["threshold_file"]
+    threshold = float(threshold_path.read_text(encoding="utf-8").strip())
+    (out_dir / "onnx_metadata.json").write_text(
+        json.dumps({"threshold": threshold, "model_source": str(model_path)}, indent=2),
+        encoding="utf-8",
+    )
+    print("Wrote artifacts/model.onnx, onnx_features.json, onnx_metadata.json")
 
 
 if __name__ == "__main__":

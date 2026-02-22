@@ -23,20 +23,22 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-lock.txt
 
       - name: Compile source files (warnings as errors)
-        run: python -W error -m py_compile src/*.py
+        run: python -W error -m py_compile src/*.py deployment/*.py benchmarking/*.py hardware_aware_ml/*.py real_time_pipelines/*.py scripts/*.py
 
-      - name: Train pipeline smoke test
-        run: python -m src.train
-
-
-      - name: Unified systems workflow smoke test
+      - name: End-to-end system build
         run: |
-          python real_time_pipelines/unified_pipeline.py --mode both
+          python -m src.train
+          python deployment/export_onnx.py
+          python deployment/quantize_onnx.py
+          python deployment/parity_check.py --abs-tol 0.04 --mean-tol 0.01 --batch-size 256
+          python benchmarking/statistical_benchmark.py --runs 5 --batch-size 256
           python hardware_aware_ml/tradeoff_experiments.py
           python benchmarking/dashboard.py
+          python real_time_pipelines/unified_pipeline.py --mode both
+          python scripts/reproducibility_check.py
 
       - name: API smoke tests (warnings as errors)
         run: |
@@ -74,3 +76,6 @@ jobs:
               assert r.status_code == 200, r.text
           print("api smoke tests passed")
           PY
+
+      - name: Integration and artifact schema tests
+        run: python -m unittest discover -s tests -p 'test_*.py'

@@ -10,3 +10,14 @@ artifacts:
   monitoring_logs:
     - artifacts/prediction_log.jsonl
     - artifacts/stream_inference.jsonl
+
+  deployment_validation:
+    - artifacts/parity_report.json
+    - artifacts/model.int8.onnx
+  statistical_benchmarks:
+    - artifacts/stat_benchmark_runs.csv
+    - artifacts/stat_benchmark_summary.csv
+    - artifacts/statistical_comparisons.csv
+  reproducibility:
+    - artifacts/lineage.json
+    - artifacts/reproducibility_report.json

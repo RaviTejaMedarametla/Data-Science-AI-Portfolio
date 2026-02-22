@@ -1,15 +1,15 @@
 # Hardware-Aware ML
 
-This module captures semiconductor/edge-oriented AI engineering concerns:
+This module now consumes repeated benchmark runs and measured telemetry to produce realistic system trade-offs:
 
-- Precision trade-offs (FP32 vs reduced precision approximations)
-- Memory constraints (artifact and runtime footprint)
-- Latency vs throughput (single vs batch inference)
-- Energy vs accuracy trade-offs (runtime-derived power proxy)
+- FP32 sklearn, FP32 ONNX, INT8 ONNX scenarios
+- Latency, throughput, accuracy, memory, CPU utilization
+- Optional RAPL energy counter integration and proxy-vs-measured comparison
 
-Run experiments:
+Run sequence:
 
 ```bash
+python benchmarking/statistical_benchmark.py --runs 10 --batch-size 256
 python hardware_aware_ml/tradeoff_experiments.py
 ```
 

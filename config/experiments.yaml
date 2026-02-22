@@ -9,3 +9,10 @@ experiments:
   benchmark_dashboard:
     entrypoint: python benchmarking/dashboard.py
     objective: compare_system_tradeoffs
+
+  onnx_parity_validation:
+    entrypoint: python deployment/parity_check.py
+    objective: enforce_sklearn_onnx_parity
+  statistical_benchmarking:
+    entrypoint: python benchmarking/statistical_benchmark.py --runs 10 --batch-size 256
+    objective: estimate_ci_and_significance

@@ -48,6 +48,7 @@ python real_time_pipelines/unified_pipeline.py --mode both
 
 ### 4) Run hardware-aware trade-off simulation
 ```bash
+python benchmarking/statistical_benchmark.py --runs 10 --batch-size 256
 python hardware_aware_ml/tradeoff_experiments.py
 ```
 
@@ -59,6 +60,8 @@ python benchmarking/dashboard.py
 ### 6) Export ONNX and test CPU inference
 ```bash
 python deployment/export_onnx.py
+python deployment/quantize_onnx.py
+python deployment/parity_check.py --abs-tol 0.04 --mean-tol 0.01
 python deployment/cpu_inference.py --backend sklearn
 python deployment/cpu_inference.py --backend onnx
 ```
@@ -76,6 +79,7 @@ python deployment/cpu_inference.py --backend onnx
 
 ## Reproducibility and research credibility
 
+- **Artifact lineage:** run_id + dataset/config/model hashes in `artifacts/lineage.json`
 - **Centralized experiment tracking:** `config/experiments.yaml`
 - **Dataset versioning manifest:** `config/datasets.yaml`
 - **Artifact logging registry:** `config/artifacts.yaml`

@@ -38,9 +38,16 @@ artifacts:
   threshold_file: threshold.txt
   metrics_file: metrics.json
   drift_baseline_file: drift_baseline.json
+  lineage_file: lineage.json
 monitoring:
   prediction_log_file: artifacts/prediction_log.jsonl
   drift_min_samples: 50
   drift_zscore_threshold: 3.0
   drift_min_features: 2
   class_rate_shift_threshold: 0.1
+
+benchmarking:
+  repeated_runs: 10
+  batch_size: 256
+  parity_abs_tolerance: 0.04
+  parity_mean_tolerance: 0.01
